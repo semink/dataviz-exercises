@@ -42,9 +42,19 @@ whenDocumentLoaded(() => {
 
 	// Part 1.2: Write temperatures
 	showTemperatures(document.getElementById("weather-part1"), TEST_TEMPERATURES);
-	let forcast = new Forecast(document.getElementById("weather-part2"));
-	let forcast_online = new ForecastOnline(document.getElementById("weather-part3"));
-	forcast_online.reload();
+	let forecast = new Forecast(document.getElementById("weather-part2"));
+	let forecast_online = new ForecastOnline(document.getElementById("weather-part3"));
+	let forecast_online_city = new ForecastOnlineCity(document.getElementById("weather-city"));
+	forecast.reload();
+	forecast_online.reload();
+
+	// Optional
+    document.getElementById("btn-city").onclick = () => {
+        let city = document.getElementById("query-city").value;
+        forecast_online_city.setCity(city);
+        forecast_online_city.reload();
+    };
+
 });
 
 // Part 2 - class
@@ -80,16 +90,14 @@ class Forecast {
 
 const QUERY_LAUSANNE = 'http://query.yahooapis.com/v1/public/yql?format=json&q=select * from weather.forecast where woeid in (select woeid from geo.places(1) where text="Lausanne") and u="c"';
 
-let yahoo_temp;
 class ForecastOnline extends Forecast {
 	reload() {
 		fetch(QUERY_LAUSANNE)
 			.then( response =>  response.json() )
 			.then( myJson => {
-				yahoo_temp = yahooToTemperatures(myJson);
-		})
-		.then(console.log(yahoo_temp));
-
+			    this.temperatures = yahooToTemperatures(myJson);
+			    this.show();
+            });
 	}
 }
 
@@ -99,3 +107,26 @@ function yahooToTemperatures(data) {
 
 
 // Part 4 - interactive
+class ForecastOnlineCity extends Forecast {
+
+    setCity(city) {
+        this.city = city;
+        this.query_city = 'http://query.yahooapis.com/v1/public/yql?format=json&q=select * from weather.forecast where woeid in (select woeid from geo.places(1) where text="'+city+'") and u="c"';
+    }
+    reload() {
+        fetch(this.query_city)
+            .then( response =>  response.json() )
+            .then( myJson => {
+                this.temperatures = yahooToTemperatures(myJson);
+                this.city = myJson.query.results.channel.location.city;
+                this.show();
+            });
+    }
+    show() {
+        // display the name of the city
+        super.show();
+        let h4 = document.createElement("h4");
+        h4.textContent = this.city;
+        this.container.insertBefore(h4, this.container.childNodes[0]);
+    }
+}
